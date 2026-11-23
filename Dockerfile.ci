@@ -1,0 +1,11 @@
+FROM ubuntu:26.04
+
+ARG DEBIAN_FRONTEND=noninteractive
+
+# Match the KiCad major version used by the dev container.
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends software-properties-common ca-certificates && \
+    add-apt-repository -y ppa:kicad/kicad-10.0-releases && \
+    apt-get update && \
+    apt-get install -y --no-install-recommends kicad kicad-symbols kicad-footprints && \
+    rm -rf /var/lib/apt/lists/*

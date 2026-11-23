@@ -1,0 +1,91 @@
+name: risc-v-eval-board CI
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+  schedule:
+    - cron: '23 6 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  packages: write
+
+# Image tags are shared by runs for the same ref; do not overwrite an image while it is in use.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  queue: max
+
+jobs:
+  build_ci_image:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      image-name: ghcr.io/utoss/risc-v-eval-board
+      dockerfile: ./Dockerfile.ci
+      tag-prefix: ci-
+    secrets: inherit
+
+  select_ci_image:
+    runs-on: ubuntu-latest
+    needs: build_ci_image
+    if: always() && (needs.build_ci_image.result == 'success' || needs.build_ci_image.result == 'skipped')
+    outputs:
+      image-tag: ${{ steps.image.outputs.tag }}
+    steps:
+      - name: Select image
+        id: image
+        env:
+          BUILT_IMAGE: ${{ needs.build_ci_image.outputs.image-primary-tag }}
+        run: |
+          if [ -n "$BUILT_IMAGE" ]; then
+            echo "tag=$BUILT_IMAGE" >> "$GITHUB_OUTPUT"
+          else
+            echo 'tag=ghcr.io/utoss/risc-v-eval-board:ci-branch-main' >> "$GITHUB_OUTPUT"
+          fi
+
+  build_devcontainer_image:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
+    uses: ./.github/workflows/docker-image.yml
+    with:
+      image-name: ghcr.io/utoss/risc-v-eval-board-devcontainer
+      dockerfile: .devcontainer/Dockerfile
+      tag-prefix: ""
+    secrets: inherit
+
+  kicad:
+    name: KiCad checks
+    needs: select_ci_image
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    container:
+      image: ${{ needs.select_ci_image.outputs.image-tag }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Check schematic electrical rules
+        run: |
+          mkdir -p reports
+          kicad-cli version
+          kicad-cli sch erc --exit-code-violations \
+            --output reports/erc.rpt \
+            kicad_proj/risc-v-eval-board/risc-v-eval-board.kicad_sch
+
+      - name: Check PCB design rules and schematic parity
+        if: success() || failure()
+        run: |
+          mkdir -p reports
+          kicad-cli pcb drc --refill-zones --schematic-parity --exit-code-violations \
+            --output reports/drc.rpt \
+            kicad_proj/risc-v-eval-board/risc-v-eval-board.kicad_pcb
+
+      - name: Upload KiCad reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: kicad-reports
+          path: reports/*.rpt
+          if-no-files-found: warn
+          retention-days: 7
