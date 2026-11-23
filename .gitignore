@@ -1,0 +1,4 @@
+# KiCad local history and machine-specific files
+kicad_proj/**/.history/
+kicad_proj/**/*.kicad_prl
+kicad_proj/**/*\.lck
