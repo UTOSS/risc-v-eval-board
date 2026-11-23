@@ -1,0 +1,28 @@
+{
+  "name": "utoss-risc-v-eval-board-devcontainer",
+  "build": {
+    "dockerfile": "Dockerfile",
+    "context": ".."
+  },
+  "remoteUser": "dev",
+  "forwardPorts": [3389],
+  "portsAttributes": {
+    "3389": { "label": "XRDP desktop", "protocol": "tcp", "onAutoForward": "silent" }
+  },
+  "postStartCommand": "bash -c '.devcontainer/scripts/post-start.sh ${containerWorkspaceFolder}'",
+  "customizations": {
+    "vscode": {
+      "settings": {
+        "terminal.integrated.profiles.linux": {
+          "zsh": {
+            "path": "zsh",
+            "args": [
+              "-l"
+            ]
+          }
+        },
+        "terminal.integrated.defaultProfile.linux": "zsh"
+      }
+    }
+  }
+}
