@@ -1,4 +1,6 @@
 (sym_lib_table
 	(version 7)
 	(lib (name "easyeda") (type "KiCad") (uri "${KIPRJMOD}/libraries/easyeda.kicad_sym") (options "") (descr ""))
+	(lib (name "usb") (type "KiCad") (uri "${KIPRJMOD}/libraries/usb.kicad_sym") (options "") (descr "Project USB connectors"))
+	(lib (name "power") (type "KiCad") (uri "${KIPRJMOD}/libraries/power.kicad_sym") (options "") (descr "Project isolated power parts"))
 )
